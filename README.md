@@ -1,4 +1,20 @@
 # LLM-Safety-Eval
+<p align="center">
+  <a href="https://github.com/Jscire0917/llm-safety-eval">
+    <img src="https://img.shields.io/github/stars/Jscire0917/llm-safety-eval?style=for-the-badge&logo=github&color=green" alt="GitHub stars" />
+  </a>
+  <a href="https://github.com/Jscire0917/llm-safety-eval">
+    <img src="https://img.shields.io/github/forks/Jscire0917/llm-safety-eval?style=for-the-badge&logo=github&color=blue" alt="GitHub forks" />
+  </a>
+  <a href="https://github.com/Jscire0917/llm-safety-eval/issues">
+    <img src="https://img.shields.io/github/issues/Jscire0917/llm-safety-eval?style=for-the-badge&logo=github" alt="GitHub issues" />
+  </a>
+  <a href="https://github.com/Jscire0917/llm-safety-eval/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/Jscire0917/llm-safety-eval?style=for-the-badge&color=purple" alt="License" />
+  </a>
+  <img src="https://img.shields.io/badge/python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python version" />
+  <img src="https://img.shields.io/badge/FastAPI-0.100%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
+</p>
 
 Model-agnostic FastAPI service to evaluate large language models for **bias**, **toxicity**, and **hallucination**.
 
