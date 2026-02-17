@@ -3,10 +3,10 @@ from fastapi import Header, HTTPException
 
 # Set env var: export API_KEYS=sk-mysecret123,sk-localtest
 VALID_KEYS = set(
-    k.strip() for k in os.getenv("API_KEYS", "").split(",") if k.strip()
+k.strip() for k in os.getenv("API_KEYS", "").split(",") if k.strip()
 )
 if not VALID_KEYS:
-    print("[WARNING] No API_KEYS set in environment – auth disabled")
+   print("[WARNING] No API_KEYS set in environment – auth disabled")
 
 
 # Dependency to authenticate API key from headers

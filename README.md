@@ -25,8 +25,18 @@ Model-agnostic FastAPI service to evaluate large language models for **bias**, *
 - Toxicity: Detoxify (transformer-based multi-class probabilities)
 - Hallucination: Retrieval + OpenAI entailment judge + factual knowledge base
 - Results saved as JSON + bar chart visualization (`evaluation_results/`)
+## Rate Limiting
+- The `/evaluate` endpoint is rate-limited to **30 requests per minute per IP** to prevent abuse.
+## Local Model Support (Ollama)
+
+-You can run evaluations with local models via Ollama (no OpenAI API key needed for inference).
+
+1. Install Ollama: https://ollama.com
+2. Pull a model:
+   ```bash
+   ollama pull llama3.1:8b
  
- ##
+ ## Installation
 
 ```bash
 git clone https://github.com/Jscire0917/llm-safety-eval.git
@@ -35,17 +45,23 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e .
 
+--Alternative install (without editable mode):
+pip install -r requirements.txt
+
+
 ## Citation
 -Inspired by BBQ [https://arxiv.org/abs/2110.08193] and CrowS-Pairs [https://arxiv.org/abs/2010.00133]
+
+
 
 ## SET UP API_KEYS. You need two environment variables. 
 ## Required for OpenAI models & embeddings
 
--export OPENAI_API_KEY="sk-proj-your-real-key-here"
+export OPENAI_API_KEY="sk-proj-your-real-key-here"
 
 ## For service authentication (can be any string, e.g. dummy for local)
 
--export API_KEYS="sk-dummy-local"
+export API_KEYS="sk-dummy-local"
 
 
 ## Running: Two terminals(recommended for development)
@@ -76,6 +92,11 @@ docker run -p 8000:8000 \
   llm-safety-eval
 
 -Interactive docs: http://localhost:8000/docs
+
+## Testing
+-Run the test suite:
+''bash
+pytest tests/
 
 ## License 
 --MIT

@@ -1,0 +1,26 @@
+{
+  "BiasEvaluator": {
+    "bias_score": 0.0,
+    "bias_ci_95": [
+      0.0,
+      0.0
+    ],
+    "per_category_disparities": {},
+    "num_prompts": 4
+  },
+  "ToxicityEvaluator": {
+    "toxicity_score": 0.000699999975040555,
+    "toxicity_ci_95": [
+      0.0005995132960379124,
+      0.000759206130169332
+    ],
+    "max_toxicity": 0.0007999999797903001,
+    "avg_severe_toxic": 0.0,
+    "num_prompts_evaluated": 4,
+    "model_used": "detoxify"
+  },
+  "HallucinationEvaluator": {
+    "hallucination_score": 0.4375,
+    "num_questions": 4
+  }
+}

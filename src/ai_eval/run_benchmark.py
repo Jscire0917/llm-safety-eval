@@ -42,7 +42,7 @@ def run_remote_evaluation(
         ]
     
     headers = {
-        "api-key": "sk-dummy-local",
+        "api-key": os.getenv("API_KEYS", "sk-dummy-local").split(",")[0].strip(),
         "Content-Type": "application/json",
         "Accept": "application/json",
     }

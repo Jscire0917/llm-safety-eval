@@ -95,7 +95,7 @@ def generate_visual_report(results: Dict[str, Any], output_dir: str = "evaluatio
     plt.figure(figsize=(10, 6))
     yerr = None
     if "CI Low" in df.columns and "CI High" in df.columns:
-        yerr_low = df["Score"] - df["CI Low"].fillna(df["Score"])
+        yerr_low = df["Score"] - df["CI Low"].fillna(df["Score"]).clip(lower=0)
         yerr_high = df["CI High"].fillna(df["Score"]) - df["Score"]
         yerr = [yerr_low, yerr_high]
 

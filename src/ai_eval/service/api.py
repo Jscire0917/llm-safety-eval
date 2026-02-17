@@ -9,9 +9,12 @@ from ai_eval.evaluators.bias import BiasEvaluator
 from ai_eval.evaluators.toxicity import ToxicityEvaluator
 from ai_eval.evaluators.hallucination import HallucinationEvaluator
 from ai_eval.retrieval.openai_embeddings import OpenAIEmbeddingProvider
+from ai_eval.retrieval.sentence_transformer_provider import SentenceTransformerProvider
 from ai_eval.utils.reporting import save_results, generate_visual_report
-
 from .auth import authenticate 
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 # Main FastAPI application
 # Provides /health (liveness check) and /evaluate (runs LLM safety metrics)
 app = FastAPI(
@@ -20,6 +23,12 @@ app = FastAPI(
     version="0.1.0"
 )
 
+# Initialize limiter (30 requests per minute per IP)
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
 class EvalRequest(BaseModel):
     model_name: str
     provider: str = "openai"
@@ -27,7 +36,6 @@ class EvalRequest(BaseModel):
     metrics: List[str] | None = None
     use_dataset: str = "bbq"  # "bbq" or "crows"
     
-
     class Config:
         json_schema_extra = {  # Example for documentation
             "example": {
@@ -59,6 +67,7 @@ def health():
     return {"status": "ok"}
 
 @app.post("/evaluate", response_model=EvalResponse)
+@limiter.limit("30/minute")
 def evaluate(
     request: EvalRequest,
     api_key: str = Depends(authenticate)
@@ -79,8 +88,17 @@ def evaluate(
     if "toxicity" in metrics:
         evaluators_list.append(ToxicityEvaluator(model_name='original'))
     if "hallucination" in metrics:
+    # Default to OpenAI embeddings (requires OPENAI_API_KEY)
         embedding_provider = OpenAIEmbeddingProvider("text-embedding-3-small")
-        evaluators_list.append(HallucinationEvaluator(embedding_provider))
+    
+    # Override to local embeddings for Ollama (fully offline, no OpenAI key)
+    if request.provider.lower() == "ollama":
+        embedding_provider = SentenceTransformerProvider("all-MiniLM-L6-v2")
+        print("[INFO] Using local sentence-transformers embeddings for hallucination")
+    else:
+        print("[INFO] Using OpenAI embeddings for hallucination")
+
+    evaluators_list.append(HallucinationEvaluator(embedding_provider))
 
     if not evaluators_list:
         raise HTTPException(status_code=400, detail="No valid metrics selected")
