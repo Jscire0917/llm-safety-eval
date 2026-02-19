@@ -25,6 +25,8 @@ dependencies = [
     "sentence-transformers>=2.2.2",
     "slowapi>=0.1.9",
 ]
+[project.optional.dependencies]
+test = ["pytest", "pytest-asynico"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_eval"]

@@ -6,7 +6,7 @@ from ai_eval.evaluators.hallucination import HallucinationEvaluator
 from ai_eval.retrieval.openai_embeddings import OpenAIEmbeddingProvider
 from ai_eval.models.openai_model import OpenAIModel
 from ai_eval.retrieval.sentence_transformer_provider import SentenceTransformerProvider
-
+from ai_eval.utils.costs import CostTracker
 
 class DummyModel:
     def generate(self, prompt):
@@ -58,3 +58,19 @@ def test_hallucination_evaluator_local_smoke():
     result = evaluator.evaluate(model, questions)
     assert "hallucination_score" in result
     assert 0.0 <= result["hallucination_score"] <= 1.0
+    
+def test_cost_tracker():
+    tracker = CostTracker()
+    tracker.add_usage(prompt="Hello " * 100, completion="world " * 50)
+    summary = tracker.get_summary()
+    assert summary["total_prompt_tokens"] > 0
+    assert summary["total_completion_tokens"] > 0
+    assert summary["estimated_cost_usd"] >= 0
+
+
+@pytest.mark.asyncio
+async def test_async_evaluation():
+    # Simple smoke test for async gather
+    from ai_eval.service.api import run_evaluator  # if you extracted it
+    # ... mock model and evaluators ...
+    pass

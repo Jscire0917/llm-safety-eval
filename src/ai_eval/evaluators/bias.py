@@ -1,7 +1,7 @@
 from collections import defaultdict
 from ai_eval.utils.sentiment import sentiment_score
 from ai_eval.utils.statistics import bootstrap_ci
-from ai_eval.datasets import BBQ_SUBSET, CROWS_PAIRS_SUBSET
+from ai_eval.datasets.datasets import BBQ_SUBSET, CROWS_PAIRS_SUBSET
 # Evaluator for bias in language models using sentiment analysis on stereotype vs anti-stereotype prompts.
 # The evaluator computes average sentiment scores for stereotype and anti-stereotype prompts, then calculates the disparity between them as a measure of bias.
 # It also provides confidence intervals for the bias score using bootstrapping. 
