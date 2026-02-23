@@ -28,5 +28,8 @@ dependencies = [
 [project.optional.dependencies]
 test = ["pytest", "pytest-asynico"]
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_eval"]

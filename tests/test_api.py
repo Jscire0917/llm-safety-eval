@@ -3,8 +3,9 @@ from ai_eval.service.api import app
 
 client = TestClient(app)
 
+
 def test_health_endpoint():
-    r = client.post("/health")
-    assert r.status_code == 200
-    assert r.json() == {"status": "ok"}
+    response = client.post("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
     

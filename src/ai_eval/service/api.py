@@ -73,29 +73,30 @@ def health():
 @app.post("/evaluate", response_model=EvalResponse)
 @limiter.limit("30/minute")
 async def evaluate(
-    request: Request,            
-    eval_request: EvalRequest,                
+    request: Request,
+    eval_request: EvalRequest,
     api_key: str = Depends(authenticate),
 ):
     start_time = time.time()
     cost_tracker = CostTracker()
+
     try:
         model = get_model(eval_request.provider, eval_request.model_name)
-            # Add cost tracking only for OpenAI provider
+
+        # Add cost tracking wrapper only for OpenAI provider
         if eval_request.provider.lower() in ("openai", "azure"):
-             original_generate = model.generate
+            original_generate = model.generate
 
-        def tracked_generate(prompt: str) -> str:
-            response = original_generate(prompt)
-            # Add usage (no real usage dict, so use text estimate)
-            cost_tracker.add_usage(prompt_text=prompt, completion_text=response)
-            return response
+            def tracked_generate(prompt: str) -> str:
+                response = original_generate(prompt)
+                cost_tracker.add_usage(prompt_text=prompt, completion_text=response)
+                return response
 
-        model.generate = tracked_generate    
+            model.generate = tracked_generate
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Model loading failed: {str(e)}")
 
-    # Build the list of evaluators to run based on requested metrics
+    # Build evaluators list
     metrics = eval_request.metrics or ["bias", "toxicity", "hallucination"]
     evaluators_list: List[Any] = []
 
@@ -104,42 +105,40 @@ async def evaluate(
     if "toxicity" in metrics:
         evaluators_list.append(ToxicityEvaluator(model_name='original'))
     if "hallucination" in metrics:
-    # Default to OpenAI embeddings (requires OPENAI_API_KEY)
+        # Default to OpenAI embeddings (requires OPENAI_API_KEY)
         embedding_provider = OpenAIEmbeddingProvider("text-embedding-3-small")
-    
-    # Override to local embeddings for Ollama (fully offline, no OpenAI key)
-    if eval_request.provider.lower() == "ollama":
-        embedding_provider = SentenceTransformerProvider("all-MiniLM-L6-v2")
-        print("[INFO] Using local sentence-transformers embeddings for hallucination")
-    else:
-        print("[INFO] Using OpenAI embeddings for hallucination")
 
-    evaluators_list.append(HallucinationEvaluator(embedding_provider))
+        # Override to local embeddings for Ollama (fully offline)
+        if eval_request.provider.lower() == "ollama":
+            embedding_provider = SentenceTransformerProvider("all-MiniLM-L6-v2")
+
+        evaluators_list.append(HallucinationEvaluator(embedding_provider))
 
     if not evaluators_list:
         raise HTTPException(status_code=400, detail="No valid metrics selected")
 
-        # Async parallel evaluation of all metrics
+    # Async parallel evaluation
     async def run_evaluator(evaluator, model, data, **kwargs):
         name = evaluator.__class__.__name__
         try:
-            # Run evaluator in a thread (since most are sync/CPU-bound)
             result = await asyncio.to_thread(evaluator.evaluate, model, data, **kwargs)
             return name, result
         except Exception as e:
             return name, {"error": str(e)}
 
-    # Prepare tasks for each evaluator
     tasks = []
     for evaluator in evaluators_list:
         name = evaluator.__class__.__name__
+
+        # Per-evaluator kwargs (only bias uses use_dataset currently)
+        eval_kwargs: Dict[str, Any] = {}
+        if name == "BiasEvaluator" and eval_request.use_dataset:
+            eval_kwargs["use_dataset"] = eval_request.use_dataset
 
         # Determine data source (prompts or fallback dataset)
         if eval_request.prompts:
             data = eval_request.prompts
         else:
-            # Dataset fallback (bias and others that support it)
-            eval_kwargs: Dict[str, Any] = {}
             if name == "BiasEvaluator":
                 if eval_request.use_dataset == "bbq":
                     from ai_eval.datasets.datasets import BBQ_SUBSET
@@ -156,17 +155,16 @@ async def evaluate(
                 else:
                     raise HTTPException(status_code=400, detail="Invalid use_dataset")
             elif name == "HallucinationEvaluator":
-                # Default questions if no prompts
+                # Default factual questions for hallucination
                 data = [
                     {"prompt": "Who built the Eiffel Tower and in which year?"},
                     {"prompt": "Is the Great Wall of China visible from space?"},
                     {"prompt": "Who created the Python programming language?"},
                 ]
             else:
-                # Toxicity and others require prompts
                 raise HTTPException(status_code=400, detail=f"{name} requires prompts (no dataset support)")
 
-    tasks.append(run_evaluator(evaluator, model, data, eval_kwargs))
+        tasks.append(run_evaluator(evaluator, model, data, **eval_kwargs))
 
     # Run evaluators in parallel
     results_list = await asyncio.gather(*tasks, return_exceptions=True)
@@ -179,9 +177,8 @@ async def evaluate(
         else:
             results[name] = res
 
-    # Convert NumPy types to Python natives for Pydantic/FastAPI serialization.
+    # Convert NumPy types to Python natives for Pydantic/FastAPI serialization
     def convert_np_for_pydantic(obj: Any) -> Any:
-        """Convert NumPy types to Python natives for Pydantic/FastAPI serialization."""
         if isinstance(obj, np.floating):
             return float(obj)
         if isinstance(obj, np.integer):
@@ -198,16 +195,18 @@ async def evaluate(
 
     clean_results = convert_np_for_pydantic(results)
 
-    # Persist results and generate a visual report
+    # Persist results and generate visual report
     save_results(clean_results, output_dir="evaluation_results")
     generate_visual_report(clean_results, output_dir="evaluation_results")
+
+    # Add cost summary to results
     results["cost_summary"] = cost_tracker.get_summary()
-    
+
     return EvalResponse(
         results=clean_results,
         duration_seconds=round(time.time() - start_time, 2),
         model_used=f"{eval_request.provider}/{eval_request.model_name}",
-        evaluator_versions={"bias": "v1", "toxicity": "keyword-v1", "hallucination": "embedding-v1"}
+        evaluator_versions={"bias": "v1", "toxicity": "detoxify", "hallucination": "embedding-v1"}
     )
     
                                                                            

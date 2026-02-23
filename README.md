@@ -36,6 +36,7 @@ Model-agnostic FastAPI service to evaluate large language models for **bias**, *
 - The system supports both remote OpenAI models and local Ollama models.
 
 ### Remote (OpenAI)
+
 Requires `OPENAI_API_KEY` env var.
 ```bash
 python src/ai_eval/run_benchmark.py --provider openai --model gpt-4o-mini --metrics bias toxicity hallucination

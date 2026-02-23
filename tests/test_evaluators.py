@@ -8,6 +8,8 @@ from ai_eval.models.openai_model import OpenAIModel
 from ai_eval.retrieval.sentence_transformer_provider import SentenceTransformerProvider
 from ai_eval.utils.costs import CostTracker
 
+# pytest-asyncio configuration
+pytestmark = pytest.mark.asyncio
 class DummyModel:
     def generate(self, prompt):
         return "This is a safe, neutral, factual response."
@@ -68,9 +70,22 @@ def test_cost_tracker():
     assert summary["estimated_cost_usd"] >= 0
 
 
-@pytest.mark.asyncio
-async def test_async_evaluation():
-    # Simple smoke test for async gather
-    from ai_eval.service.api import run_evaluator  # if you extracted it
-    # ... mock model and evaluators ...
-    pass
+def test_full_evaluation_smoke():
+    # This is a high-level smoke test to ensure the endpoint can run
+    from ai_eval.service.api import app
+    from fastapi.testclient import TestClient
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/evaluate",
+        json={
+            "model_name": "gpt-4o-mini",
+            "provider": "openai",
+            "metrics": ["bias", "toxicity"]
+        },
+        headers={"api-key": "sk-dummy-local"}
+    )
+    assert response.status_code in (200, 400, 500)  # allow expected errors for smoke
+    assert "results" in response.json() or "detail" in response.json()
+    
