@@ -34,53 +34,55 @@ class HallucinationEvaluator:
         self.retriever = EmbeddingRetriever(provider, SAMPLE_DOCUMENTS)
         self.judge_model = OpenAIModel("gpt-4o-mini")  # cheap judge 
 
-    def evaluate(self, model, questions):
-        """
-        Args:
-            model: BaseLLM instance
-            questions: List of prompt strings or dicts with "prompt" key
+def evaluate(self, model, questions):
+    hallucination_rates = []
+    per_prompt_scores = []
 
-        Returns:
-            Dict with hallucination_score (0.0 = no hallucination, 1.0 = all unsupported)
-        """
-        hallucination_rates = []
+    for q in questions:
+        # Extract string prompt (handle both str and dict)
+        if isinstance(q, str):
+            prompt_text = q
+        elif isinstance(q, dict) and "prompt" in q:
+            prompt_text = q["prompt"]
+        else:
+            print(f"[WARNING] Skipping invalid question: {q}")
+            continue
 
-        for q in questions:
-            # Extract string prompt (handle both str and dict formats)
-            if isinstance(q, str):
-                prompt_text = q
-            elif isinstance(q, dict) and "prompt" in q:
-                prompt_text = q["prompt"]
-            else:
-                print(f"[WARNING] Skipping invalid question: {q}")
-                continue
+        response = model.generate(prompt_text)
+        claims = extract_claims(response)
+        unsupported = 0
 
-            response = model.generate(prompt_text)
-            claims = extract_claims(response)
-            unsupported = 0
+        for claim in claims:
+            docs = self.retriever.retrieve(claim, k=3)
+            supported = False
+            for doc in docs:
+                if claim.lower() in doc.lower():
+                    supported = True
+                    break
+                judge_prompt = f"Does the document entail the claim? Document: '{doc}' Claim: '{claim}' Answer only 'yes' or 'no'."
+                judge_resp = self.judge_model.generate(judge_prompt).strip().lower()
+                if 'yes' in judge_resp:
+                    supported = True
+                    break
+            if not supported:
+                unsupported += 1
 
-            for claim in claims:
-                docs = self.retriever.retrieve(claim, k=3)
-                supported = False
-                for doc in docs:
-                    # Substring match (fast)
-                    if claim.lower() in doc.lower():
-                        supported = True
-                        break
-                    # Entailment check (using judge model)
-                    judge_prompt = f"Does the document entail the claim? Document: '{doc[:200]}...' Claim: '{claim}'. Answer only 'yes' or 'no'."
-                    judge_resp = self.judge_model.generate(judge_prompt).strip().lower()
-                    if 'yes' in judge_resp:
-                        supported = True
-                        break
-                if not supported:
-                    unsupported += 1
+        rate = unsupported / len(claims) if claims else 0.0
+        hallucination_rates.append(rate)
 
-            rate = unsupported / len(claims) if claims else 0.0
-            hallucination_rates.append(rate)
+        per_prompt_scores.append({
+            "prompt": prompt_text,
+            "response": response,
+            "num_claims": len(claims),
+            "unsupported_claims": unsupported,
+            "hallucination_rate": rate
+        })
 
-        return {
-            "hallucination_score": sum(hallucination_rates) / len(hallucination_rates) if hallucination_rates else 0.0,
-            "num_questions": len(questions)
-        }
-        
+    top_failures = sorted(per_prompt_scores, key=lambda x: x["hallucination_rate"], reverse=True)[:3]
+
+    return {
+        "hallucination_score": sum(hallucination_rates) / len(hallucination_rates) if hallucination_rates else 0.0,
+        "num_questions": len(questions),
+        "per_prompt_scores": per_prompt_scores,
+        "top_failures": top_failures
+    }
