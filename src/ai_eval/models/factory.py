@@ -13,6 +13,10 @@ try:
 except ImportError:
     OllamaModel = None
 
+try:
+    from .mlx_model import MLXModel
+except ImportError:
+    MLXModel = None
 
 def get_model(provider: str, model_name: str) -> BaseLLM:
     """
@@ -42,6 +46,14 @@ def get_model(provider: str, model_name: str) -> BaseLLM:
                 "Model must be pulled:          ollama pull llama3.1:8b"
             )
         return OllamaModel(model_name)
+    
+    elif provider.lower() == "mlx":
+        if MLXModel is None:
+            raise ImportError(
+            "MLX support requires 'mlx' and 'mlx-lm' packages.\n"
+            "Install with: pip install mlx mlx-lm"
+        )
+        return MLXModel(model_name)  # model_name is the HF path, e.g. "mlx-community/Meta-Llama-3.1-8B-Instruct-4bit"
     else:
         raise ValueError(
             f"Unsupported provider: {provider!r}\n"

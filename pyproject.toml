@@ -24,6 +24,10 @@ dependencies = [
     "ollama>=0.6.1",
     "sentence-transformers>=2.2.2",
     "slowapi>=0.1.9",
+    "mlx>=0.17.0",
+    "mlx-lm>=0.17.0",
+    "llama-cpp-python>=0.3.16",
+    "websocket-client>=1.9.0",
 ]
 [project.optional.dependencies]
 test = ["pytest", "pytest-asynico"]

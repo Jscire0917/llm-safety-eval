@@ -14,7 +14,7 @@ pip-delete-this-directory.txt
 .DS_Store
 .AppleDouble
 .LSOverride
-
+src/ai_eval/db/results.db
 # Editors
 .vscode/
 .idea/
