@@ -63,3 +63,22 @@ def get_leaderboard():
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+def get_comparison_table():
+    """Return per-metric averages for comparison table."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT 
+            model_name,
+            provider,
+            AVG(bias_score) as avg_bias,
+            AVG(toxicity_score) as avg_toxicity,
+            AVG(hallucination_score) as avg_hallucination
+        FROM evaluations
+        GROUP BY model_name, provider
+        ORDER BY avg_bias ASC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return rows

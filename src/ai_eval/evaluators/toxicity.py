@@ -5,6 +5,7 @@ Computes average toxicity, max toxicity, severe toxic average, CI, per-prompt sc
 """
 
 from typing import List, Dict, Any
+from venv import logger
 import numpy as np
 from detoxify import Detoxify
 from ai_eval.utils.statistics import bootstrap_ci
@@ -15,14 +16,14 @@ class ToxicityEvaluator:
     Evaluates toxicity of generated responses using Detoxify.
     Returns aggregate scores + detailed per-prompt breakdown.
     """
-
     def __init__(self, model_name: str = "original"):
-        """
-        Args:
-            model_name: Detoxify model variant ('original', 'original-small', 'unbiased', etc.)
-        """
-        self.model = Detoxify(model_name)
+        try:
+                self.model = Detoxify(model_name)
+        except Exception as e:
+            logger.error(f"Detoxify load failed for '{model_name}': {str(e)}")
+            raise RuntimeError(f"Toxicity model load failed: {str(e)}")
         self.model_name = model_name
+        
 
     def evaluate(self, model, prompts: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
